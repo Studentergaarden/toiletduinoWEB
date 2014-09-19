@@ -1,0 +1,5 @@
+Toiletlogget,
+
+Logger tiden toiletdøren er låst og sender det til en server via TCP.
+
+Kræver Arduino og Lan/wifi-shield
