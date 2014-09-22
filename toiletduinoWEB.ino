@@ -15,6 +15,12 @@
  $ lsof | grep TCP | grep lem
  Get additional info with
  $ lsof -p #pid
+
+ program arduino over ethernet shield tftp
+ http://forum.arduino.cc/index.php?topic=267003.0
+ https://github.com/codebendercc/Ariadne-Bootloader
+ http://www.freetronics.com/pages/how-to-upload-a-sketch-to-your-arduino-via-a-network
+
 */
 
 /* macro for bool busy/free */
@@ -55,7 +61,7 @@ const unsigned long MIN_DURATION = 15000; // ms
  * 0xDE 0xAD 0xBE 0xEF 0xFE 0xEE, for example. Then your third would end in
  * 0xEF, the fourth in 0xF0, and so on. */
 byte mac[] = {  
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE };
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEF };
 IPAddress ip(172, 16, 10, 2);
 IPAddress gateway(172,16,0,1);
 
@@ -215,9 +221,9 @@ void sendServer(const char *id, bool val){
   /* client.print("&type="); */
   /* client.print(type); */
   /* client.print("&id="); */
-  client.print("&type=state&id=");
+  client.print("id=");
   client.print(id);
-  client.print("&val=");
+  client.print("&type=state & state=");
   client.println(val);
 }
 
@@ -226,8 +232,8 @@ void sendServer(const char *id,  unsigned long val){
   /* client.print("&type="); */
   /* client.print(type); */
   /* client.print("&id="); */
-  client.print("&type=log&id=");
+  client.print("&id=");
   client.print(id);
-  client.print("&val=");
+  client.print("&type=log&ms=");
   client.println(val);
 }
