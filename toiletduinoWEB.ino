@@ -66,7 +66,7 @@ byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE };
 IPAddress ip(172, 16, 10, 4);
 IPAddress gateway(172,16,0,1);
-IPAddress subnet(255,255,0,0);
+
 // Enter the IP address of the server you're connecting to:
 IPAddress server(130,226,169,164);
 EthernetClient client;
@@ -91,12 +91,12 @@ void setup() {
   }
 
   /* Setup sensors */
-  setupSensor(&t1,"t1",5,9); // struct, id, pin, ledPin
-  setupSensor(&t2,"t2",6,9);
+  setupSensor(&t1,"t1",2,8); // struct, id, pin, ledPin
+  setupSensor(&t2,"t2",3,8);
 
-  setupSensor(&b1,"b1",2,8);
-  setupSensor(&b2,"b2",3,8);
-  /* setupSensor(&b3,"b3",4,8); */
+  setupSensor(&b1,"b1",5,9);
+  setupSensor(&b2,"b2",6,9);
+  setupSensor(&b3,"b3",7,9);
 
 }
 
@@ -126,7 +126,7 @@ void loop()
   
   checkSensor(&b1);
   checkSensor(&b2);
-  /* checkSensor(&b3); */
+  checkSensor(&b3);
   checkSensor(&t1);
   checkSensor(&t2);
 }
