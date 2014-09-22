@@ -48,6 +48,8 @@ sensor_t t1, t2, b1, b2, b3;
 void setupSensor(sensor_t *t, const char *id, byte SensorPin, byte ledPin);
 void checkSensor(sensor_t *t);
 void blink(byte ledPin, int times);
+void resetEthernet();
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
 /* Overloading or template */
 /* http://stackoverflow.com/questions/8627625/is-it-possible-to-make-function-that-will-accept-multiple-data-types-for-given-a */
 void sendServer(const char *id, bool state);
@@ -61,10 +63,10 @@ const unsigned long MIN_DURATION = 15000; // ms
  * 0xDE 0xAD 0xBE 0xEF 0xFE 0xEE, for example. Then your third would end in
  * 0xEF, the fourth in 0xF0, and so on. */
 byte mac[] = {  
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEF };
-IPAddress ip(172, 16, 10, 2);
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE };
+IPAddress ip(172, 16, 10, 4);
 IPAddress gateway(172,16,0,1);
-
+IPAddress subnet(255,255,0,0);
 // Enter the IP address of the server you're connecting to:
 IPAddress server(130,226,169,164);
 EthernetClient client;
@@ -105,11 +107,13 @@ void loop()
   /* Test for connection */
   int attemps = 0;
   while (!client.connected()) {
+    Serial.print(attemps);
     Serial.println("Creating connection...");
 
     /* if connection is lost/disconnected, we might need to close the connection and start it again!! */
     if (attemps > 5){
-      client.stop();
+      resetFunc(); /* do a complete reset of the board */
+      resetEthernet();
       attemps = 0;
     }
     client.connect(server, 5555);
@@ -127,7 +131,12 @@ void loop()
   checkSensor(&t2);
 }
 
-
+void resetEthernet() {
+  client.stop();
+  delay(1000);
+  Ethernet.begin(mac, ip, gateway, gateway);
+  delay(1000);
+}
 
 void setupSensor(sensor_t *t, const char *id, byte SensorPin, byte ledPin){
 
