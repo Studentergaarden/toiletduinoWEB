@@ -20,7 +20,7 @@ ARDUINO_PORT = /dev/ttyACM*
 # ARDUINO_PORT = /dev/ttyUSB*
 
 # name of the folder in /urs/share/arduino/libraries/
-ARDUINO_LIBS = Ethernet SPI
+ARDUINO_LIBS = Ethernet SPI Wire LCD
 
 # Jeg ved ikke hvilken af følgende der skal ændres:
 # standard is 115200

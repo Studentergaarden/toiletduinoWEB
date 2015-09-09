@@ -1,3 +1,5 @@
 build-cli/
 build-uno/
 TAGS
+mounts/
+!mounts/lcdCase.scad
