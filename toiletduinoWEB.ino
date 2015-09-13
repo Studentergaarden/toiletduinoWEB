@@ -370,7 +370,6 @@ void readServer(){
 					// for the last set of par=arg, pch==NULL
 					if (pch == NULL) {
 						memcpy(arg,ppar,strlen(ppar));
-						Serial.println("her");
 					}else{
 						memcpy(arg,ppar,pch-ppar);
 					}
@@ -448,7 +447,11 @@ void readServer(){
 				lcd.print("Det tog "), lcd.print(timeStr);
 				lcd.setCursor(0,2);
 				formatTime(lcdData.avg, timeStr);
-				lcd.print("Gns for i dag "), lcd.print(timeStr);
+				lcd.print("Gns for i dag :");
+				// center avg. time
+				byte offset = 10-strlen(timeStr)/2;
+				lcd.setCursor(offset-1,3);
+				lcd.print(timeStr);
 				// start timer
 				lcdData.previousMillis = millis();
 				lcdData.on = true;
