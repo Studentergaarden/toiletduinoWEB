@@ -4,15 +4,24 @@
   Testing:
   Setup netcat to listen to the relevant (TCP) port on the server.
   In this case:
+  $ nc -l -vv -p 555
+
+  In the case of a gateway
   $ nc -l -vv -p 5555 -g 172.16.0.1
-  $ ncat -l -k --broker 5555
-  $ ncat loki 5555
+  $ nc -l -k --broker 5555
+
+  Connect to the server with:
+  $ nc loki 5555
+
+  Client sending:
+  id=t1&type=state&state=1
+  id=t2&type=log&ms=29561
+
+  Server sending:
+  log id=t1 time=123 avg=987 visits=30
 
   See more netcat examples here:
   http://www.g-loaded.eu/2006/11/06/netcat-a-couple-of-useful-examples/
-
-  cmd network
-  log id=t1 time=746269 avg=1234567890
 
   Useful commands to see which ports are open:
   $ netstat -lnptu | grep LISTEN  (viser hvilke services der kører)
@@ -44,6 +53,9 @@
 #include <LiquidCrystal_I2C.h>
 #endif
 
+// For debugging
+//#include <MemoryFree.h>
+//#include <pgmStrToRAM.h>
 
 typedef struct {
 	unsigned long start, duration;
@@ -81,20 +93,20 @@ const unsigned long MIN_DURATION = 15000; // ms
 /* Just increment the MAC-address from the end, eg: the next device could be
  * 0xDE 0xAD 0xBE 0xEF 0xFE 0xEE, for example. Then your third would end in
  * 0xEF, the fourth in 0xF0, and so on. */
-byte mac[] = {
-	0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(172, 16, 10, 4);
-IPAddress gateway(172,16,0,1);
+
+// deviceID is used for creating mac-address. Must be unique.
+const byte deviceID     = 10;
+uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, deviceID};
 const int port = 5555;
 // Enter the IP address of the server you're connecting to:
-IPAddress server(130,226,169,164);
-// IPAddress server(172,16,136,64);
-const char deviceName[] = "pharisæer";
+IPAddress server(10,42,0,1);
+const char deviceName[] = "pharisæer_toilet";
 EthernetClient client;
 
 #ifdef __LCD
 // create an lcd instance with correct constructor for how the lcd is wired to the I2C chip
 // addr, EN, RW, RS, D4, D5, D6, D7, Backlight, POLARITY
+// Find the addr from the address scanner in the README.org file.
 LiquidCrystal_I2C  lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 #endif
 
@@ -116,32 +128,34 @@ void setup() {
 #endif
 
 	// start the Ethernet connection:
-	Ethernet.begin(mac, ip, gateway, gateway);
+	Ethernet.begin(mac);
+	//Ethernet.begin(mac, ip, gateway, gateway);
 	// start the serial library:
-	Serial.begin(9600);
+	//Serial.begin(9600);
 	// give the Ethernet shield a second to initialize:
 	delay(1000);
-	Serial.println("connecting...");
+	//Serial.println("connecting...");
 
 	// if you get a connection, report back via serial:
 	if (client.connect(server, port)) {
-		Serial.println("connected");
+		myPrint->print("type=connected&id="), myPrint->println(deviceName);
+		//Serial.print(deviceName), Serial.println(" connected.");
 	}
 	else {
 		// if you didn't get a connection to the server:
-		Serial.println("connection failed");
+		//Serial.println("connection failed");
 	}
 
 	/* Setup sensors */
 	setupSensor(&t1,"t1",5,9); // struct, id, pin
 	setupSensor(&t2,"t2",6,9);
-	setupSensor(&b1,"b1",2,8);
-	setupSensor(&b2,"b2",3,8);
+	/* setupSensor(&b1,"b1",2,8); */
+	/* setupSensor(&b2,"b2",3,8); */
 
 	/*
-	 * old setup(the correct, but the lcd is hardwired to the shower socket, and I
-	 * dont really care enough about it, to also wire the toilet socket. Thus I
-	 * just swapped them here, since the shower is not used anyway.)
+	 * old setup(the correct, but the lcd is hardwired to the shower socket, and
+	 * I dont really care enough about it, to also wire the toilet socket. Thus
+	 * I just swapped them here, since the shower is not used anyway.)
 
 	 setupSensor(&t1,"t1",2,8); // struct, id, pin, ledPin
 	 setupSensor(&t2,"t2",3,8);
@@ -150,34 +164,40 @@ void setup() {
 	 setupSensor(&b2,"b2",6,9);
 	 setupSensor(&b3,"b3",7,9);
 	*/
+
+	/* myPrint->print(F("Fre ram, setup: ")); */
+	/* myPrint->println(freeMemory(), DEC); */
+
 }
 
 void loop()
 {
 	//delay(100);
 
-	/* Test for connection */
 
 	int attemps = 0;
 	while (!client.connected()) {
-		Serial.print(attemps);
-		Serial.println("Creating connection...");
+		//Serial.print(attemps);
+		//Serial.println("Creating connection...");
 
-		// if connection is lost/disconnected, we might need to close the connection and start it again!!
+		// if connection is lost/disconnected, we might need to close the
+		// connection and start it again!!
 		if (attemps > 5){
 			resetFunc(); // do a complete reset of the board
 			attemps = 0;
 		}
 		client.connect(server, port);
-		blink(b1.ledPin,6);
+		blink(t1.ledPin,6);
 		attemps++;
 
-		delay(1000);
+		delay(500);
+		if(client.connected())
+			myPrint->print("type=connected&id="), myPrint->println(deviceName);
 	}
 
 
-	checkSensor(&b1);
-	checkSensor(&b2);
+	/* checkSensor(&b1); */
+	/* checkSensor(&b2); */
 	//  checkSensor(&b3);
 	checkSensor(&t1);
 	checkSensor(&t2);
@@ -203,7 +223,8 @@ void setupSensor(sensor_t *t, const char *id, byte SensorPin, byte ledPin){
 }
 
 void checkSensor(sensor_t *t){
-	/* set a flag and start timer when door is locked. door is not declared 'locked' until after a set interval */
+	/* set a flag and start timer when door is locked. door is not declared
+	   'locked' until after a set interval */
 
 	const float scaleb = 0.999;
 	const float scalea = 0.001;
@@ -294,7 +315,7 @@ void sendServer(const char *id,  unsigned long val){
 
 #ifdef __LCD
 typedef struct {
-	unsigned long time, avg;
+	unsigned long time, avg, visits;
 	char id[10];
 	bool on;
 	unsigned long previousMillis;
@@ -309,8 +330,8 @@ void readServer(){
 	static int readIndex = 0;
 	static char cmd[10], arg[10], par[10];
 	const unsigned long LCDBACKLIGHT = 30000;// ms
-
-	static lcdData_t lcdData;
+	// initialize everything to zero
+	static lcdData_t lcdData = {0};
 
 
 	if((lcdData.on == true) && (millis() - lcdData.previousMillis > LCDBACKLIGHT)) {
@@ -325,20 +346,22 @@ void readServer(){
 			readString[readIndex++] = c;
 		}else{
 			// reset the buffer if the incoming is too long
-			memset(&readString, 0, sizeof(readString));
+			memset(&readString[0], 0, sizeof(readString));
 			readIndex = 0;
 		}
 
 		if (c == '\n') {
+			//myPrint->print(F("Fre ram, newline: "));
+			//myPrint->println(freeMemory(), DEC);
 			// Terminate the read string
 			readString[readIndex-1] = '\0';
-			// myPrint->println(readString);
+			//myPrint->println(readString);
 
 			// Prepare for next reading
 			readIndex = 0;
 
 			// convert readString to all uppercase
-			for (int i = 0; i < strlen(readString); i++){
+			for (uint16_t i = 0; i < strlen(readString); i++){
 				readString[i] = toupper(readString[i]);
 			}
 
@@ -353,7 +376,8 @@ void readServer(){
 			// handle command
 			if (strcmp(cmd,"LOG")==0 ){
 				while (pch!=NULL){
-					// poor mans reqex. Match everything between ' '...=, that is (space)...(=). The parameter
+					// poor mans reqex. Match everything between ' '...=, that
+					// is (space)...(=). The parameter
 					char* ppar = strchr(pch, '=');
 					if (ppar == NULL)
 						break;
@@ -374,18 +398,25 @@ void readServer(){
 						memcpy(arg,ppar,pch-ppar);
 					}
 					arg[strlen(arg)] = '\0';
-					// log id=t1 time=9999 avg=1234
+					// log id=t1 time=9999 avg=1234 
 
 					if (strcmp(par,"ID")==0 ){
-						//+1 is to make room for the NULL char that terminates C strings
-						// in C++ we need to cast the return of malloc. This is not the case in C
-						// lcdData.id = (char *)malloc(strlen(arg) + 1);
-						// strcpy adds '\0'
+						/*
+						  +1 is to make room for the NULL char that terminates C
+						  strings in C++ we need to cast the return of
+						  malloc. This is not the case in C
+						 lcdData.id = (char *)malloc(strlen(arg) + 1);
+
+						 Now id is allocated as a fixed char array in the struct.
+						 strcpy adds '\0'
+						*/
 						strcpy(lcdData.id, arg);
 					}else if (strcmp(par,"TIME")==0 ){
 						lcdData.time = atol(arg);
 					}else if (strcmp(par,"AVG")==0 ){
 						lcdData.avg = atol(arg);
+					}else if (strcmp(par,"VISITS")==0 ){
+						lcdData.visits = atol(arg);
 					}else{
 						myStream->println("unknown log arguments - toiletduinoWEB"), myStream->print(arg);
 					}
@@ -442,16 +473,22 @@ void readServer(){
 					sprintf(sted,"toilet");
 				sprintf(buf,"Du brugte %s %s", sted, buf2);
 				lcd.print(buf);
+
 				lcd.setCursor(0,1);
 				formatTime(lcdData.time, timeStr);
 				lcd.print("Det tog "), lcd.print(timeStr);
+
 				lcd.setCursor(0,2);
+				memset(buf, 0, sizeof(buf));
+				sprintf(buf,"Besog i dag: %lu", lcdData.visits);
+				lcd.print(buf);
+
+				lcd.setCursor(0,3);
 				formatTime(lcdData.avg, timeStr);
-				lcd.print("Gns for i dag :");
-				// center avg. time
-				byte offset = 10-strlen(timeStr)/2;
-				lcd.setCursor(offset-1,3);
-				lcd.print(timeStr);
+				memset(buf, 0, sizeof(buf));
+				sprintf(buf,"Gns:    %s", timeStr);
+				lcd.print(buf);
+
 				// start timer
 				lcdData.previousMillis = millis();
 				lcdData.on = true;
@@ -467,11 +504,11 @@ void readServer(){
 					myStream->print("mac address    : "), myStream->print(mac[0],HEX), myStream->print(":"), myStream->print(mac[1],HEX),
 						myStream->print(":"), myStream->print(mac[2],HEX), myStream->print(":"), myStream->print(mac[3],HEX),
 						myStream->print(":"), myStream->print(mac[4],HEX), myStream->print(":"), myStream->println(mac[5],HEX);
-					myStream->print("ip address     : "), myStream->println(ip);
+					myStream->print("ip address     : "), myStream->println(Ethernet.localIP());
 					myStream->print("server address : "), myStream->println(server);
 					myStream->print("port           : "), myStream->println(port);
-					myStream->print("gateway        : "), myStream->println(gateway);
-				}else if (strcmp(par,"UPTIME")==0 ){
+					//myStream->print("gateway        : "), myStream->println(gateway);
+					//}else if (strcmp(par,"UPTIME")==0 ){
 					// http://forum.arduino.cc/index.php?topic=71212.0
 				}else{
 					myStream->println("unknown parameter - toiletduinoWEB"), myStream->print(par);
@@ -493,13 +530,15 @@ void readServer(){
 			memset(&arg[0], 0, sizeof(arg));
 			memset(&par[0], 0, sizeof(par));
 			memset(&cmd[0], 0, sizeof(cmd));
-			memset(&readString, 0, sizeof(readString));
+			memset(&readString[0], 0, sizeof(readString));
 			/* free(lcdData.id); */
 			// set whole struct to zero
 			// lcdData = (const lcdData_t){ 0 };
 			memset(&lcdData.id[0], 0, sizeof(lcdData.id));
 			lcdData.time = 0;
 			lcdData.avg = 0;
+			//myPrint->print(F("Fre ram, end og readserver: "));
+			//myPrint->println(freeMemory(), DEC);
 		}
 	}
 }

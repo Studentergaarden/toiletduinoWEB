@@ -16,11 +16,14 @@
 BOARD_TAG    = uno
 ARDUINO_PORT = /dev/ttyACM*
 
+# BOARD_TAG    = leonardo
+# ARDUINO_PORT = /dev/ttyACM*
+
 # BOARD_TAG    = mega
 # ARDUINO_PORT = /dev/ttyUSB*
 
 # name of the folder in /urs/share/arduino/libraries/
-ARDUINO_LIBS = Ethernet SPI Wire LCD
+ARDUINO_LIBS = Ethernet SPI Wire LCD pgmStrToRAM
 
 # Jeg ved ikke hvilken af følgende der skal ændres:
 # standard is 115200
@@ -35,8 +38,7 @@ $(shell etags *.ino *.cpp)
 ARDUINO_DIR=/usr/share/arduino
 # ARDUINO_DIR=~/src/arduino-1.5.7
 #ARDMK_DIR=/usr/share
-ARDMK_DIR=~/Dropbox/Labitat/libraries/Arduino-Makefile
-AVR_TOOLS_DIR= /usr
+ARDMK_DIR=~/src/Arduino-Makefile
 
 # suppress printing configuration.
 ARDUINO_QUIET=1
